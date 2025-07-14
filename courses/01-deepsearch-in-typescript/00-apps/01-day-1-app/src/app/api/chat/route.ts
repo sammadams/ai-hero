@@ -7,6 +7,9 @@ import { model } from "~/models";
 import { auth } from "~/server/auth/index.ts";
 import { z } from "zod";
 import { searchSerper } from "~/serper";
+import { db } from "~/server/db/index";
+import { users, requests } from "~/server/db/schema";
+import { eq, and, gte, lte } from "drizzle-orm";
 
 export const maxDuration = 60;
 
@@ -15,6 +18,35 @@ export async function POST(request: Request) {
   if (!session?.user) {
     return new Response("Unauthorized", { status: 401 });
   }
+
+  // Rate limiting logic
+  const userId = session.user.id;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  // Fetch user and check admin
+  const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  const isAdmin = user?.isAdmin;
+  const MAX_REQUESTS_PER_DAY = 50;
+
+  if (!isAdmin) {
+    const requestCount = await db
+      .select()
+      .from(requests)
+      .where(and(
+        eq(requests.userId, userId),
+        gte(requests.createdAt, today),
+        lte(requests.createdAt, tomorrow)
+      ));
+    if (requestCount.length >= MAX_REQUESTS_PER_DAY) {
+      return new Response("Too Many Requests", { status: 429 });
+    }
+  }
+
+  // Insert request record
+  await db.insert(requests).values({ userId });
 
   const body = (await request.json()) as {
     messages: Array<Message>;
