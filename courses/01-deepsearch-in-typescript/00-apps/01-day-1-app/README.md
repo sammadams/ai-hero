@@ -44,3 +44,11 @@ AUTH_DISCORD_SECRET=your-discord-client-secret-here
 ```
 
 These are required for Discord login to work.
+
+7. Add your Serper API key to your `.env` file:
+
+```
+SERPER_API_KEY=your-serper-api-key-here
+```
+
+This is required for the web search tool to function.
