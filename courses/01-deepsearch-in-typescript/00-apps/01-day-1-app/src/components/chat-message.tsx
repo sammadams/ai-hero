@@ -1,7 +1,10 @@
 import ReactMarkdown, { type Components } from "react-markdown";
+import type { Message } from "ai";
+
+export type MessagePart = NonNullable<Message["parts"]>[number];
 
 interface ChatMessageProps {
-  text: string;
+  parts: MessagePart[];
   role: string;
   userName: string;
 }
@@ -38,7 +41,33 @@ const Markdown = ({ children }: { children: string }) => {
   return <ReactMarkdown components={components}>{children}</ReactMarkdown>;
 };
 
-export const ChatMessage = ({ text, role, userName }: ChatMessageProps) => {
+function renderPart(part: MessagePart, idx: number) {
+  switch (part.type) {
+    case "text":
+      return <Markdown key={idx}>{part.text}</Markdown>;
+    case "tool-invocation":
+      return (
+        <div key={idx} className="my-2 rounded bg-gray-700 p-2 text-xs">
+          <span className="font-bold">[Tool Call]</span> <span title="MessagePart: tool-invocation">{part.toolInvocation.toolName}</span>
+          <pre className="mt-1 whitespace-pre-wrap break-all">{JSON.stringify(part.toolInvocation, null, 2)}</pre>
+        </div>
+      );
+    case "reasoning":
+      return (
+        <div key={idx} className="my-2 rounded bg-gray-700 p-2 text-xs">
+          <span className="font-bold">[Reasoning]</span> <span title="MessagePart: reasoning">{part.reasoning}</span>
+        </div>
+      );
+    default:
+      return (
+        <div key={idx} className="my-2 rounded bg-gray-700 p-2 text-xs opacity-60">
+          <span className="font-bold">[Unknown Part]</span> <span title={`MessagePart: ${part.type}`}>{part.type}</span>
+        </div>
+      );
+  }
+}
+
+export const ChatMessage = ({ parts, role, userName }: ChatMessageProps) => {
   const isAI = role === "assistant";
 
   return (
@@ -51,9 +80,8 @@ export const ChatMessage = ({ text, role, userName }: ChatMessageProps) => {
         <p className="mb-2 text-sm font-semibold text-gray-400">
           {isAI ? "AI" : userName}
         </p>
-
         <div className="prose prose-invert max-w-none">
-          <Markdown>{text}</Markdown>
+          {parts?.map((part, idx) => renderPart(part, idx))}
         </div>
       </div>
     </div>
