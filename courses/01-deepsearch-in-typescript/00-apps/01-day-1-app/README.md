@@ -35,3 +35,12 @@ GENERATIVE_AI_API_KEY=your-google-api-key-here
 ```
 
 This is required for the Gemini model to function.
+
+6. Add your Discord authentication credentials to your `.env` file:
+
+```
+AUTH_DISCORD_ID=your-discord-client-id-here
+AUTH_DISCORD_SECRET=your-discord-client-secret-here
+```
+
+These are required for Discord login to work.
