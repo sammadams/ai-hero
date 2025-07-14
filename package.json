@@ -8,6 +8,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.0",
     "@ai-sdk/deepseek": "^0.1.6",
+    "@ai-sdk/google": "^1.2.22",
     "@ai-sdk/openai": "^1.1.0",
     "@ai-sdk/openai-compatible": "^0.0.13",
     "@ai-sdk/react": "^1.1.15",
