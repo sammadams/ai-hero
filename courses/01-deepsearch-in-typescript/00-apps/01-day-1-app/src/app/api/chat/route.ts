@@ -1,3 +1,4 @@
+import { appendResponseMessages } from "ai";
 import type { Message } from "ai";
 import {
   streamText,
@@ -10,6 +11,7 @@ import { searchSerper } from "~/serper";
 import { db } from "~/server/db/index";
 import { users, requests } from "~/server/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
+import { upsertChat } from "~/server/db/queries";
 
 export const maxDuration = 60;
 
@@ -50,12 +52,26 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     messages: Array<Message>;
+    chatId?: string;
   };
+
+  let { messages, chatId } = body;
+  let newChatId = chatId;
+  let chatTitle = messages[0]?.content?.toString().slice(0, 100) || "New Chat";
+
+  // If no chatId, create a new chat with the user's first message before streaming
+  if (!chatId) {
+    newChatId = crypto.randomUUID();
+    await upsertChat({
+      userId,
+      chatId: newChatId,
+      title: chatTitle,
+      messages: messages.map((msg, idx) => ({ ...msg, order: idx })),
+    });
+  }
 
   return createDataStreamResponse({
     execute: async (dataStream) => {
-      const { messages } = body;
-
       const result = streamText({
         model,
         messages,
@@ -79,8 +95,21 @@ export async function POST(request: Request) {
           },
         },
         maxSteps: 10,
+        onFinish: async ({ response }) => {
+          const responseMessages = response.messages;
+          const updatedMessages = appendResponseMessages({
+            messages,
+            responseMessages,
+          });
+          // Save the updated messages to the database (only parts property is required)
+          await upsertChat({
+            userId,
+            chatId: newChatId!,
+            title: chatTitle,
+            messages: updatedMessages.map((msg, idx) => ({ ...msg, order: idx })),
+          });
+        },
       });
-
       result.mergeIntoDataStream(dataStream);
     },
     onError: (e) => {
