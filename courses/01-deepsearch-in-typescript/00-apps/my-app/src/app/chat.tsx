@@ -7,6 +7,7 @@ import { Square } from "lucide-react";
 import React from "react";
 import { useRouter } from "next/navigation";
 import type { Message } from "ai";
+import { StickToBottom } from "use-stick-to-bottom";
 
 export function isNewChatCreated(
   data: unknown,
@@ -66,22 +67,24 @@ export const ChatPage = ({ userName, isAuthenticated, chatId, isNewChat, initial
   return (
     <>
       <div className="flex flex-1 flex-col">
-        <div
+        <StickToBottom
           className="mx-auto w-full max-w-[65ch] flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500"
           role="log"
           aria-label="Chat messages"
+          resize="smooth"
+          initial="smooth"
         >
-          {messages.map((message, index) => {
-            return (
-              <ChatMessage
-                key={index}
-                parts={message.parts ?? []}
-                role={message.role}
-                userName={userName}
-              />
-            );
-          })}
-        </div>
+            <StickToBottom.Content>
+              {messages.map((message) => (
+                <ChatMessage
+                  key={message.id}
+                  parts={message.parts ?? []}
+                  role={message.role}
+                  userName={userName}
+                />
+              ))}
+            </StickToBottom.Content>
+          </StickToBottom>
 
         <div className="border-t border-gray-700">
           <form
