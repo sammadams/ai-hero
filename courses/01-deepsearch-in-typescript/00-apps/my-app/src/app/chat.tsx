@@ -5,22 +5,49 @@ import { SignInModal } from "~/components/sign-in-modal";
 import { useChat } from "@ai-sdk/react";
 import { Square } from "lucide-react";
 import React from "react";
+import { useRouter } from "next/navigation";
+
+export function isNewChatCreated(
+  data: unknown,
+): data is { type: "NEW_CHAT_CREATED"; chatId: string } {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "type" in data &&
+    (data as any).type === "NEW_CHAT_CREATED" &&
+    "chatId" in data
+  );
+}
 
 interface ChatProps {
   userName: string;
   isAuthenticated: boolean;
+  chatId: string | undefined;
 }
 
-export const ChatPage = ({ userName, isAuthenticated }: ChatProps) => {
+export const ChatPage = ({ userName, isAuthenticated, chatId }: ChatProps) => {
   const {
     messages,
     input,
     handleInputChange,
     handleSubmit,
     isLoading,
-  } = useChat();
+    data,
+  } = useChat({
+    body: {
+      chatId,
+    },
+  });
 
   const [showSignIn, setShowSignIn] = React.useState(false);
+  const router = useRouter();
+
+  React.useEffect(() => {
+    const lastDataItem = data?.[data.length - 1];
+    if (isNewChatCreated(lastDataItem)) {
+      router.push(`?id=${lastDataItem.chatId}`);
+    }
+  }, [data, router]);
 
   const onFormSubmit = (e: React.FormEvent) => {
     if (!isAuthenticated) {
