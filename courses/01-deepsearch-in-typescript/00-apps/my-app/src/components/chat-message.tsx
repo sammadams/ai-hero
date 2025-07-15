@@ -58,12 +58,14 @@ function renderPart(part: MessagePart, idx: number) {
           <span className="font-bold">[Reasoning]</span> <span title="MessagePart: reasoning">{part.reasoning}</span>
         </div>
       );
+    /*
     default:
       return (
         <div key={idx} className="my-2 rounded bg-gray-700 p-2 text-xs opacity-60">
           <span className="font-bold">[Unknown Part]</span> <span title={`MessagePart: ${part.type}`}>{part.type}</span>
         </div>
       );
+    */
   }
 }
 

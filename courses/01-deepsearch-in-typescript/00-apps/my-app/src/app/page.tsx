@@ -3,15 +3,8 @@ import Link from "next/link";
 import { auth } from "~/server/auth/index.ts";
 import { ChatPage } from "./chat.tsx";
 import { AuthButton } from "../components/auth-button.tsx";
-
-const chats = [
-  {
-    id: "1",
-    title: "My First Chat",
-  },
-];
-
-const activeChatId = "1";
+import { getChats, getChat } from "~/server/db/queries";
+import type { Message } from "ai";
 
 export default async function HomePage({
   searchParams,
@@ -22,6 +15,23 @@ export default async function HomePage({
   const userName = session?.user?.name ?? "Guest";
   const isAuthenticated = !!session?.user;
   const { id: chatId } = await searchParams;
+
+  let chats = [];
+  let initialMessages: Message[] = [];
+  if (isAuthenticated) {
+    chats = await getChats({ userId: session.user.id });
+    if (chatId) {
+      const chat = await getChat({ userId: session.user.id, chatId });
+      if (chat && chat.messages) {
+        initialMessages = chat.messages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role as "user" | "assistant",
+          parts: msg.parts.parts,
+          content: "",
+        }));
+      }
+    }
+  }
 
   return (
     <div className="flex h-screen bg-gray-950">
@@ -43,12 +53,12 @@ export default async function HomePage({
         </div>
         <div className="-mt-1 flex-1 space-y-2 overflow-y-auto px-4 pt-1 scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600">
           {chats.length > 0 ? (
-            chats.map((chat) => (
+            chats.map((chat: any) => (
               <div key={chat.id} className="flex items-center gap-2">
                 <Link
-                  href={`/?chatId=${chat.id}`}
+                  href={`/?id=${chat.id}`}
                   className={`flex-1 rounded-lg p-3 text-left text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                    chat.id === activeChatId
+                    chat.id === chatId
                       ? "bg-gray-700"
                       : "hover:bg-gray-750 bg-gray-800"
                   }`}
@@ -73,7 +83,7 @@ export default async function HomePage({
         </div>
       </div>
 
-      <ChatPage userName={userName} isAuthenticated={isAuthenticated} chatId={chatId} />
+      <ChatPage userName={userName} isAuthenticated={isAuthenticated} chatId={chatId} initialMessages={initialMessages} />
     </div>
   );
 }

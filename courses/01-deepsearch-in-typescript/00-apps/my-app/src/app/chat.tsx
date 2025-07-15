@@ -6,6 +6,7 @@ import { useChat } from "@ai-sdk/react";
 import { Square } from "lucide-react";
 import React from "react";
 import { useRouter } from "next/navigation";
+import type { Message } from "ai";
 
 export function isNewChatCreated(
   data: unknown,
@@ -23,9 +24,10 @@ interface ChatProps {
   userName: string;
   isAuthenticated: boolean;
   chatId: string | undefined;
+  initialMessages: Message[];
 }
 
-export const ChatPage = ({ userName, isAuthenticated, chatId }: ChatProps) => {
+export const ChatPage = ({ userName, isAuthenticated, chatId, initialMessages }: ChatProps) => {
   const {
     messages,
     input,
@@ -37,6 +39,7 @@ export const ChatPage = ({ userName, isAuthenticated, chatId }: ChatProps) => {
     body: {
       chatId,
     },
+    initialMessages,
   });
 
   const [showSignIn, setShowSignIn] = React.useState(false);
