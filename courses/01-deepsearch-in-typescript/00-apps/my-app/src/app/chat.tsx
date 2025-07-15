@@ -23,11 +23,12 @@ export function isNewChatCreated(
 interface ChatProps {
   userName: string;
   isAuthenticated: boolean;
-  chatId: string | undefined;
+  chatId: string;
+  isNewChat: boolean;
   initialMessages: Message[];
 }
 
-export const ChatPage = ({ userName, isAuthenticated, chatId, initialMessages }: ChatProps) => {
+export const ChatPage = ({ userName, isAuthenticated, chatId, isNewChat, initialMessages }: ChatProps) => {
   const {
     messages,
     input,
@@ -38,6 +39,7 @@ export const ChatPage = ({ userName, isAuthenticated, chatId, initialMessages }:
   } = useChat({
     body: {
       chatId,
+      isNewChat,
     },
     initialMessages,
   });

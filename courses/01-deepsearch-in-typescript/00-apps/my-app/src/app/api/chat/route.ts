@@ -52,19 +52,17 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     messages: Array<Message>;
-    chatId?: string;
+    chatId: string;
+    isNewChat: boolean;
   };
 
-  let { messages, chatId } = body;
-  let newChatId = chatId;
+  const { messages, chatId, isNewChat } = body;
   let chatTitle = messages[0]?.content?.toString().slice(0, 100) || "New Chat";
 
-  // If no chatId, create a new chat with the user's first message before streaming
-  if (!chatId) {
-    newChatId = crypto.randomUUID();
+  if (isNewChat) {
     await upsertChat({
       userId,
-      chatId: newChatId,
+      chatId,
       title: chatTitle,
       messages: messages.map((msg, idx) => ({ ...msg, order: idx })),
     });
@@ -72,10 +70,10 @@ export async function POST(request: Request) {
 
   return createDataStreamResponse({
     execute: async (dataStream) => {
-      if (!chatId && newChatId) {
+      if (isNewChat) {
         dataStream.writeData({
           type: "NEW_CHAT_CREATED",
-          chatId: newChatId,
+          chatId,
         });
       }
       const result = streamText({
@@ -110,7 +108,7 @@ export async function POST(request: Request) {
           // Save the updated messages to the database (only parts property is required)
           await upsertChat({
             userId,
-            chatId: newChatId!,
+            chatId,
             title: chatTitle,
             messages: updatedMessages.map((msg, idx) => ({ ...msg, order: idx })),
           });

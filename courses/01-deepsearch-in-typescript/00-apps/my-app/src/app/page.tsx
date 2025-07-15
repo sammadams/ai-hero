@@ -14,13 +14,15 @@ export default async function HomePage({
   const session = await auth();
   const userName = session?.user?.name ?? "Guest";
   const isAuthenticated = !!session?.user;
-  const { id: chatId } = await searchParams;
+  const { id: chatIdFromUrl } = await searchParams;
+  const chatId = chatIdFromUrl ?? crypto.randomUUID();
+  const isNewChat = !chatIdFromUrl;
 
-  let chats = [];
+  let chats: any[] = [];
   let initialMessages: Message[] = [];
   if (isAuthenticated) {
     chats = await getChats({ userId: session.user.id });
-    if (chatId) {
+    if (!isNewChat) {
       const chat = await getChat({ userId: session.user.id, chatId });
       if (chat && chat.messages) {
         initialMessages = chat.messages.map((msg: any) => ({
@@ -83,7 +85,14 @@ export default async function HomePage({
         </div>
       </div>
 
-      <ChatPage userName={userName} isAuthenticated={isAuthenticated} chatId={chatId} initialMessages={initialMessages} />
+      <ChatPage
+        key={chatId}
+        userName={userName}
+        isAuthenticated={isAuthenticated}
+        chatId={chatId}
+        isNewChat={isNewChat}
+        initialMessages={initialMessages}
+      />
     </div>
   );
 }
