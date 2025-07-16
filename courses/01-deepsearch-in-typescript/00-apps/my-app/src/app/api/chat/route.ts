@@ -12,7 +12,7 @@ import { z } from "zod";
 import { searchSerper } from "~/serper";
 import { scrapePages } from "~/server/llm-tools/scrape-pages";
 import { db } from "~/server/db/index";
-import { users, requests } from "~/server/db/schema";
+import { users, requests, chats } from "~/server/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { upsertChat } from "~/server/db/queries";
 
@@ -28,6 +28,12 @@ export async function POST(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  // Create a Langfuse trace for this chat session (sessionId will be updated if needed)
+  const trace = langfuse.trace({
+    name: "chat",
+    userId: session.user.id,
+  });
+
   // Rate limiting logic
   const userId = session.user.id;
   const today = new Date();
@@ -40,8 +46,9 @@ export async function POST(request: Request) {
   const isAdmin = user?.isAdmin;
   const MAX_REQUESTS_PER_DAY = 50;
 
+  let requestCount = [];
   if (!isAdmin) {
-    const requestCount = await db
+    requestCount = await db
       .select()
       .from(requests)
       .where(and(
@@ -54,7 +61,6 @@ export async function POST(request: Request) {
     }
   }
 
-  // Insert request record
   await db.insert(requests).values({ userId });
 
   const body = (await request.json()) as {
@@ -69,20 +75,43 @@ export async function POST(request: Request) {
   let chatTitle = messages[0]?.content?.toString().slice(0, 100) || "New Chat";
 
   if (isNewChat) {
-    await upsertChat({
-      userId,
-      chatId: currentChatId,
-      title: chatTitle,
-      messages: messages.map((msg, idx) => ({ ...msg, order: idx })),
+    // --- create-new-chat span ---
+    const createChatSpan = trace.span({
+      name: "create-new-chat",
+      input: { userId, chatId: currentChatId, title: chatTitle, messages: messages.map((msg, idx) => ({ role: msg.role, order: idx })) },
     });
+    try {
+      await upsertChat({
+        userId,
+        chatId: currentChatId,
+        title: chatTitle,
+        messages: messages.map((msg, idx) => ({ ...msg, order: idx })),
+      });
+      createChatSpan.end({ output: { chatId: currentChatId } });
+      trace.update({ sessionId: currentChatId });
+    } catch (err) {
+      createChatSpan.end({ output: { error: err instanceof Error ? err.message : err } });
+      throw err;
+    }
+  } else {
+    // --- verify-chat-ownership span ---
+    const verifyOwnershipSpan = trace.span({
+      name: "verify-chat-ownership",
+      input: { userId, chatId: currentChatId },
+    });
+    try {
+      const chat = await db.query.chats.findFirst({ where: eq(chats.id, currentChatId) });
+      if (!chat || chat.userId !== userId) {
+        verifyOwnershipSpan.end({ output: { error: "Chat not found or unauthorized" } });
+        return new Response("Chat not found or unauthorized", { status: 404 });
+      }
+      verifyOwnershipSpan.end({ output: { chatId: currentChatId, userId: chat.userId } });
+      trace.update({ sessionId: currentChatId });
+    } catch (err) {
+      verifyOwnershipSpan.end({ output: { error: err instanceof Error ? err.message : err } });
+      throw err;
+    }
   }
-
-  // Create a Langfuse trace for this chat session
-  const trace = langfuse.trace({
-    sessionId: currentChatId,
-    name: "chat",
-    userId: session.user.id,
-  });
 
   return createDataStreamResponse({
     execute: async (dataStream) => {
@@ -144,14 +173,24 @@ export async function POST(request: Request) {
             messages,
             responseMessages,
           });
-          // Save the updated messages to the database (only parts property is required)
-          await upsertChat({
-            userId,
-            chatId: currentChatId,
-            title: chatTitle,
-            messages: updatedMessages.map((msg, idx) => ({ ...msg, order: idx })),
+          // --- save-chat-history span ---
+          const saveChatHistorySpan = trace.span({
+            name: "save-chat-history",
+            input: { userId, chatId: currentChatId, title: chatTitle, messages: updatedMessages.map((msg, idx) => ({ role: msg.role, order: idx })) },
           });
-          await langfuse.flushAsync();
+          try {
+            await upsertChat({
+              userId,
+              chatId: currentChatId,
+              title: chatTitle,
+              messages: updatedMessages.map((msg, idx) => ({ ...msg, order: idx })),
+            });
+            saveChatHistorySpan.end({ output: { chatId: currentChatId } });
+            await langfuse.flushAsync();
+          } catch (err) {
+            saveChatHistorySpan.end({ output: { error: err instanceof Error ? err.message : err } });
+            throw err;
+          }
         },
       });
       result.mergeIntoDataStream(dataStream);
