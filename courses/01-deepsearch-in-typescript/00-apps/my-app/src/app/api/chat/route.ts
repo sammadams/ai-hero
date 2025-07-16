@@ -1,3 +1,5 @@
+import { env } from "~/env";
+import { Langfuse } from "langfuse";
 import { appendResponseMessages } from "ai";
 import type { Message } from "ai";
 import {
@@ -14,6 +16,10 @@ import { eq, and, gte, lte } from "drizzle-orm";
 import { upsertChat } from "~/server/db/queries";
 
 export const maxDuration = 60;
+
+const langfuse = new Langfuse({
+  environment: env.NODE_ENV,
+});
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -56,24 +62,33 @@ export async function POST(request: Request) {
     isNewChat: boolean;
   };
 
-  const { messages, chatId, isNewChat } = body;
+  const { messages, chatId: chatIdFromBody, isNewChat } = body;
+  // Always use the chatId from the body if present, otherwise generate a new one
+  const currentChatId = chatIdFromBody || crypto.randomUUID();
   let chatTitle = messages[0]?.content?.toString().slice(0, 100) || "New Chat";
 
   if (isNewChat) {
     await upsertChat({
       userId,
-      chatId,
+      chatId: currentChatId,
       title: chatTitle,
       messages: messages.map((msg, idx) => ({ ...msg, order: idx })),
     });
   }
+
+  // Create a Langfuse trace for this chat session
+  const trace = langfuse.trace({
+    sessionId: currentChatId,
+    name: "chat",
+    userId: session.user.id,
+  });
 
   return createDataStreamResponse({
     execute: async (dataStream) => {
       if (isNewChat) {
         dataStream.writeData({
           type: "NEW_CHAT_CREATED",
-          chatId,
+          chatId: currentChatId,
         });
       }
       const result = streamText({
@@ -99,7 +114,13 @@ export async function POST(request: Request) {
           },
         },
         maxSteps: 10,
-        experimental_telemetry: { isEnabled: true },
+        experimental_telemetry: {
+          isEnabled: true,
+          functionId: "agent",
+          metadata: {
+            langfuseTraceId: trace.id,
+          },
+        },
         onFinish: async ({ response }) => {
           const responseMessages = response.messages;
           const updatedMessages = appendResponseMessages({
@@ -109,10 +130,11 @@ export async function POST(request: Request) {
           // Save the updated messages to the database (only parts property is required)
           await upsertChat({
             userId,
-            chatId,
+            chatId: currentChatId,
             title: chatTitle,
             messages: updatedMessages.map((msg, idx) => ({ ...msg, order: idx })),
           });
+          await langfuse.flushAsync();
         },
       });
       result.mergeIntoDataStream(dataStream);
