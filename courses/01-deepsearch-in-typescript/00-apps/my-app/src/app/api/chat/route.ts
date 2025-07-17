@@ -15,6 +15,7 @@ import { db } from "~/server/db/index";
 import { users, requests, chats } from "~/server/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { upsertChat } from "~/server/db/queries";
+import { streamFromDeepSearch } from "~/deep-search";
 
 export const maxDuration = 60;
 
@@ -121,52 +122,8 @@ export async function POST(request: Request) {
           chatId: currentChatId,
         });
       }
-      const result = streamText({
-        model,
+      const result = streamFromDeepSearch({
         messages,
-        system: `You are an AI assistant with access to a web search tool. 
-        Always use the searchWeb tool to answer questions, and always cite your sources with inline markdown links.
-        The formatting should be:
-        [Title](Link)
-
-        You should find the latest news on the web. Today is ${new Date().toLocaleDateString()}.
-        
-        You also have access to a scrapePages tool, which can fetch the full content of web pages as markdown. Use this tool when you need more information than what is provided in search result snippets, or when you need to analyze the full content of a page. Only use this tool for URLs you are allowed to crawl, and only when necessary, as it is more resource intensive.
-        ALWAYS USE THE SCRAPEPAGES TOOL on multiple pages. Use it at least 4-6 times per query UNTIL you have the information you need. Use a diverse set of domains.
-        `,
-        tools: {
-          searchWeb: {
-            parameters: z.object({
-              query: z.string().describe("The query to search the web for"),
-            }),
-            execute: async ({ query }, { abortSignal }) => {
-              const results = await searchSerper({ q: query, num: 10 }, abortSignal);
-              return results.organic.map((result) => ({
-                title: result.title,
-                link: result.link,
-                snippet: result.snippet,
-                date: result.date,
-              }));
-            },
-          },
-          scrapePages: {
-            parameters: z.object({
-              urls: z.array(z.string()).describe("The URLs to scrape for full page content as markdown"),
-            }),
-            execute: async ({ urls }) => {
-              const { results } = await scrapePages(urls);
-              return results;
-            },
-          },
-        },
-        maxSteps: 10,
-        experimental_telemetry: {
-          isEnabled: true,
-          functionId: "agent",
-          metadata: {
-            langfuseTraceId: trace.id,
-          },
-        },
         onFinish: async ({ response }) => {
           const responseMessages = response.messages;
           const updatedMessages = appendResponseMessages({
@@ -191,6 +148,13 @@ export async function POST(request: Request) {
             saveChatHistorySpan.end({ output: { error: err instanceof Error ? err.message : err } });
             throw err;
           }
+        },
+        telemetry: {
+          isEnabled: true,
+          functionId: "agent",
+          metadata: {
+            langfuseTraceId: trace.id,
+          },
         },
       });
       result.mergeIntoDataStream(dataStream);
