@@ -16,6 +16,8 @@ import { users, requests, chats } from "~/server/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { upsertChat } from "~/server/db/queries";
 import { streamFromDeepSearch } from "~/deep-search";
+import { checkRateLimit, recordRateLimit } from "~/server/redis/rate-limit";
+import type { RateLimitConfig } from "~/server/redis/rate-limit";
 
 export const maxDuration = 60;
 
@@ -113,6 +115,26 @@ export async function POST(request: Request) {
       throw err;
     }
   }
+
+  // Global LLM rate limit config (for testing: 1 request per 5 seconds)
+  const globalRateLimitConfig: RateLimitConfig = {
+    maxRequests: 1,
+    windowMs: 5000,
+    keyPrefix: "global_llm",
+    maxRetries: 3,
+  };
+
+  // Check the global rate limit before LLM call
+  const rateLimitCheck = await checkRateLimit(globalRateLimitConfig);
+  if (!rateLimitCheck.allowed) {
+    // Wait for the rate limit to reset (blocking)
+    const isAllowed = await rateLimitCheck.retry();
+    if (!isAllowed) {
+      return new Response("Global LLM rate limit exceeded", { status: 429 });
+    }
+  }
+  // Record the request (increment the counter)
+  await recordRateLimit(globalRateLimitConfig);
 
   return createDataStreamResponse({
     execute: async (dataStream) => {
