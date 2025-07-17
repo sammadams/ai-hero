@@ -27,10 +27,49 @@ evalite("Deep Search Eval", {
           },
         ],
       },
+      {
+        input: [
+          {
+            id: "3",
+            role: "user",
+            content: "Who won the Turing Award in 2023?",
+          },
+        ],
+      },
+      {
+        input: [
+          {
+            id: "4",
+            role: "user",
+            content: "List three popular JavaScript frameworks released after 2020.",
+          },
+        ],
+      },
+      {
+        input: [
+          {
+            id: "5",
+            role: "user",
+            content: "Summarize the latest research on quantum computing breakthroughs.",
+          },
+        ],
+      },
     ];
   },
   task: async (input) => {
     return askDeepSearch(input);
   },
-  scorers: [],
+  scorers: [
+    {
+      name: "Contains Links",
+      description:
+        "Checks if the output contains any markdown links.",
+      scorer: ({ output }) => {
+        // Regex for markdown links: [text](url)
+        const markdownLinkRegex = /\[[^\]]+\]\([^\)]+\)/g;
+        const containsLinks = typeof output === "string" && markdownLinkRegex.test(output);
+        return containsLinks ? 1 : 0;
+      },
+    },
+  ],
 });
