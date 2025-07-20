@@ -59,42 +59,43 @@ export const getNextAction = async (
   const result = await generateObject({
     model,
     schema: actionSchema,
+    system: `
+    You are an AI assistant with access to web search and scraping tools. Your job is to determine the next action to take based on the current context.
+
+    You can perform three types of actions:
+
+    1. **SEARCH**: Search the web for more information when you need to find additional facts, recent updates, or specific details that aren't in your current context.
+
+    2. **SCRAPE**: Scrape specific URLs when you have found relevant pages but need to extract the full content to get complete information.
+
+    3. **ANSWER**: Answer the user's question when you have gathered sufficient information to provide a comprehensive and accurate response.
+
+    ## Decision Guidelines:
+
+    - **Search** when:
+    - You need more recent information
+    - You're missing key facts or details
+    - You need to verify information
+    - You need to find specific examples or cases
+
+    - **Scrape** when:
+    - You have found relevant URLs in search results
+    - You need the full content of a page
+    - The search snippets aren't sufficient for your answer
+
+    - **Answer** when:
+    - You have comprehensive information to answer the question
+    - You've gathered enough context from searches and scrapes
+    - You can provide a complete and accurate response
+    `,
     prompt: `
-You are an AI assistant with access to web search and scraping tools. Your job is to determine the next action to take based on the current context.
+    ## Current Context:
 
-You can perform three types of actions:
+    ${context.getStepInfo()}
 
-1. **SEARCH**: Search the web for more information when you need to find additional facts, recent updates, or specific details that aren't in your current context.
+    ${context.getContext()}
 
-2. **SCRAPE**: Scrape specific URLs when you have found relevant pages but need to extract the full content to get complete information.
-
-3. **ANSWER**: Answer the user's question when you have gathered sufficient information to provide a comprehensive and accurate response.
-
-## Decision Guidelines:
-
-- **Search** when:
-  - You need more recent information
-  - You're missing key facts or details
-  - You need to verify information
-  - You need to find specific examples or cases
-
-- **Scrape** when:
-  - You have found relevant URLs in search results
-  - You need the full content of a page
-  - The search snippets aren't sufficient for your answer
-
-- **Answer** when:
-  - You have comprehensive information to answer the question
-  - You've gathered enough context from searches and scrapes
-  - You can provide a complete and accurate response
-
-## Current Context:
-
-${context.getStepInfo()}
-
-${context.getContext()}
-
-Based on the current context, determine the next action. If you choose to search, provide a specific and targeted query. If you choose to scrape, provide the URLs you want to scrape. If you choose to answer, you're ready to provide the final response.
+    Based on the current context, determine the next action. If you choose to search, provide a specific and targeted query. If you choose to scrape, provide the URLs you want to scrape. If you choose to answer, you're ready to provide the final response.
     `,
   });
 
