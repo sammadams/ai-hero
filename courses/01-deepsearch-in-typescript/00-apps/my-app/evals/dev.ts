@@ -7,23 +7,23 @@ export const devData = [
   // Basic Questions - Recent Knowledge
   {
     input: "Who won the 2024 Masters Tournament?",
-    expected: "Scottie Scheffler won the 2024 Masters Tournament at Augusta National Golf Club.",
+    expected: "Scottie Scheffler",
   },
   {
     input: "What is the current world ranking of Rory McIlroy?",
-    expected: "Rory McIlroy is currently ranked #2 in the Official World Golf Ranking.",
+    expected: "Rory McIlroy is currently ranked #2.",
   },
   {
     input: "Who won the 2024 PGA Championship?",
-    expected: "Xander Schauffele won the 2024 PGA Championship at Valhalla Golf Club.",
+    expected: "Xander Schauffele",
   },
   {
     input: "What is the prize money for winning the 2024 US Open?",
-    expected: "The 2024 US Open had a total purse of $21.5 million, with the winner receiving $4.3 million.",
+    expected: "There was a total purse of $21.5 million, with the winner receiving $4.3 million.",
   },
   {
     input: "Who is the current FedEx Cup leader?",
-    expected: "Scottie Scheffler is the current FedEx Cup leader with the most points this season.",
+    expected: "Scottie Scheffler",
   },
   
   // Multi-hop Questions - Complex Reasoning

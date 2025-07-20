@@ -31,6 +31,7 @@ You must format all links as inline markdown links using the exact syntax: '[lin
 - URLs must be complete and functional
 - No spaces between the closing bracket ']' and opening parenthesis '('
 - Ensure proper escaping of special characters in URLs if needed
+- You must not use any of your own tools to answer the question. You must only use the information provided in the context or options to continue the operation.
 
 ${isFinal ? `
 **IMPORTANT**: You may not have all the information needed to provide a complete answer, but you should make your best effort based on the available information. Be transparent about any limitations or uncertainties in your response.
