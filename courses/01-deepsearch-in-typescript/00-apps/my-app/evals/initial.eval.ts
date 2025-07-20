@@ -45,12 +45,21 @@ evalite("Deep Search Eval - Golf", {
     {
       name: "Contains Links",
       description:
-        "Checks if the output contains any markdown links.",
+        "Checks if the output contains any footnote-style links.",
       scorer: ({ output }) => {
-        // Regex for markdown links: [text](url)
-        const markdownLinkRegex = /\[[^\]]+\]\([^\)]+\)/g;
-        const containsLinks = typeof output === "string" && markdownLinkRegex.test(output);
-        return containsLinks ? 1 : 0;
+        if (typeof output !== "string") return 0;
+        
+        // Regex for footnote references in text: [^1], [^2], etc.
+        const footnoteReferenceRegex = /\[\^[0-9]+\]/g;
+        
+        // Regex for footnote definitions at the end: [^1]: https://example.com
+        const footnoteDefinitionRegex = /\[\^[0-9]+\]:\s*https?:\/\/[^\s]+/g;
+        
+        const hasFootnoteReferences = footnoteReferenceRegex.test(output);
+        const hasFootnoteDefinitions = footnoteDefinitionRegex.test(output);
+        
+        // Return 1 if both footnote references and definitions are present
+        return hasFootnoteReferences && hasFootnoteDefinitions ? 1 : 0;
       },
     },
     Factuality,
