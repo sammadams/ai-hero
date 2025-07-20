@@ -144,7 +144,7 @@ export async function POST(request: Request) {
           chatId: currentChatId,
         });
       }
-      const result = streamFromDeepSearch({
+      const result = await streamFromDeepSearch({
         messages,
         onFinish: async ({ response }) => {
           const responseMessages = response.messages;

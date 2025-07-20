@@ -1,6 +1,7 @@
-import { streamText, type StreamTextResult } from "ai";
+import { streamText, type StreamTextResult, smoothStream } from "ai";
 import { model } from "~/models";
 import type { SystemContext } from "./system-context";
+import { markdownJoinerTransform } from "./markdown-joiner";
 
 /**
  * Options for the answer question function
@@ -242,5 +243,12 @@ Please provide a comprehensive answer to the user's question based on the availa
     system: systemPrompt,
     prompt: `# User Question:
     ${context.getUserQuestion()}`,
+    experimental_transform: [
+      smoothStream({
+        delayInMs: 20,
+        chunking: "line",
+      }),
+      markdownJoinerTransform(),
+    ],
   });
 } 
