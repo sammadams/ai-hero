@@ -3,6 +3,7 @@ import { model } from "~/models";
 import { z } from "zod";
 import { searchSerper } from "~/serper";
 import { scrapePages } from "~/server/llm-tools/scrape-pages";
+import { env } from "~/env";
 
 /**
  * The system prompt used for Deep Search LLM calls.
@@ -66,7 +67,7 @@ const TOOLS = {
       { query }: { query: string },
       { abortSignal }: { abortSignal?: AbortSignal }
     ) => {
-      const results = await searchSerper({ q: query, num: 10 }, abortSignal);
+      const results = await searchSerper({ q: query, num: env.SEARCH_RESULTS_COUNT }, abortSignal);
       return results.organic.map((result) => ({
         title: result.title,
         link: result.link,
