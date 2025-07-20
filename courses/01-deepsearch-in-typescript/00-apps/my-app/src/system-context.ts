@@ -23,11 +23,6 @@ type ScrapeResult = {
  * formatted context for the LLM to make decisions.
  */
 export class SystemContext {
-
-  constructor(userQuestion: string) {
-    this.userQuestion = userQuestion;
-  }
-
   /**
    * The current step in the loop
    */
@@ -43,20 +38,23 @@ export class SystemContext {
    */
   private scrapeHistory: ScrapeResult[] = [];
 
+  /**
+   * The user's original question
+   */
   private userQuestion: string;
+
+  /**
+   * Constructor for SystemContext
+   */
+  constructor(userQuestion: string) {
+    this.userQuestion = userQuestion;
+  }
 
   /**
    * Determines if the loop should stop based on step count
    */
   shouldStop(): boolean {
     return this.step >= 10;
-  }
-
-  /**
-   * Returns the user question
-   */
-  getUserQuestion(): string {
-    return this.userQuestion;
   }
 
   /**
@@ -85,6 +83,13 @@ export class SystemContext {
    */
   getStep(): number {
     return this.step;
+  }
+
+  /**
+   * Gets the user's original question
+   */
+  getUserQuestion(): string {
+    return this.userQuestion;
   }
 
   /**

@@ -3,7 +3,8 @@ import { scrapePages } from "~/server/llm-tools/scrape-pages";
 import { env } from "~/env";
 import { SystemContext } from "./system-context";
 import { getNextAction, type Action } from "./get-next-action";
-import { answerQuestion } from "./answer-question"
+import { answerQuestion } from "./answer-question";
+import type { StreamTextResult } from "ai";
 
 /**
  * Executes a web search and returns formatted results
@@ -32,7 +33,7 @@ async function scrapeUrl(urls: string[]) {
 /**
  * Runs the agent loop to answer a user's question
  */
-export async function runAgentLoop(userQuestion: string): Promise<string> {
+export async function runAgentLoop(userQuestion: string): Promise<StreamTextResult<{}, string>> {
   // A persistent container for the state of our system
   const ctx = new SystemContext(userQuestion);
 

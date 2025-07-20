@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+import { streamText, type StreamTextResult } from "ai";
 import { model } from "~/models";
 import type { SystemContext } from "./system-context";
 
@@ -12,10 +12,10 @@ interface AnswerQuestionOptions {
 /**
  * Answers the user's question based on the gathered context
  */
-export async function answerQuestion(
+export function answerQuestion(
   context: SystemContext,
   options: AnswerQuestionOptions = {}
-): Promise<string> {
+): StreamTextResult<{}, string> {
   const { isFinal = false } = options;
 
   const systemPrompt = `You are a helpful AI assistant that answers questions based on the information gathered from web searches and page scraping.
@@ -35,23 +35,16 @@ You must format all links as inline markdown links using the exact syntax: '[lin
 ${isFinal ? `
 **IMPORTANT**: You may not have all the information needed to provide a complete answer, but you should make your best effort based on the available information. Be transparent about any limitations or uncertainties in your response.
 ` : ''}
-`;
-
-const prompt = `
-Please provide a comprehensive answer to the user's question based on the available information. Use the search and scrape history to support your response with proper citations.
 
 ## Available Context:
 ${context.getContext()}
 
-## User Question:
-${context.getUserQuestion()}
-`;
+Please provide a comprehensive answer to the user's question based on the available information. Use the search and scrape history to support your response with proper citations.`;
 
-  const result = await generateText({
+  return streamText({
     model,
     system: systemPrompt,
-    prompt
+    prompt: `# User Question:
+    ${context.getUserQuestion()}`,
   });
-
-  return result.text;
 } 
