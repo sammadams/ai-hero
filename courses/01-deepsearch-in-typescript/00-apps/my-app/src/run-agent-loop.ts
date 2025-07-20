@@ -34,7 +34,7 @@ async function scrapeUrl(urls: string[]) {
  */
 export async function runAgentLoop(userQuestion: string): Promise<string> {
   // A persistent container for the state of our system
-  const ctx = new SystemContext();
+  const ctx = new SystemContext(userQuestion);
 
   // A loop that continues until we have an answer
   // or we've taken 10 actions
@@ -50,7 +50,7 @@ export async function runAgentLoop(userQuestion: string): Promise<string> {
       const results = await scrapeUrl(nextAction.urls);
       ctx.reportScrapes(results);
     } else if (nextAction.type === "answer") {
-      return answerQuestion(ctx, userQuestion);
+      return answerQuestion(ctx);
     }
 
     // We increment the step counter
@@ -59,5 +59,5 @@ export async function runAgentLoop(userQuestion: string): Promise<string> {
 
   // If we've taken 10 actions and still don't have an answer,
   // we ask the LLM to give its best attempt at an answer
-  return answerQuestion(ctx, userQuestion, { isFinal: true });
+  return answerQuestion(ctx, { isFinal: true });
 } 

@@ -14,7 +14,6 @@ interface AnswerQuestionOptions {
  */
 export async function answerQuestion(
   context: SystemContext,
-  userQuestion: string,
   options: AnswerQuestionOptions = {}
 ): Promise<string> {
   const { isFinal = false } = options;
@@ -36,15 +35,16 @@ You must format all links as inline markdown links using the exact syntax: '[lin
 ${isFinal ? `
 **IMPORTANT**: You may not have all the information needed to provide a complete answer, but you should make your best effort based on the available information. Be transparent about any limitations or uncertainties in your response.
 ` : ''}
-
-Please provide a comprehensive answer to the user's question based on the available information. Use the search and scrape history to support your response with proper citations.`;
+`;
 
 const prompt = `
+Please provide a comprehensive answer to the user's question based on the available information. Use the search and scrape history to support your response with proper citations.
+
 ## Available Context:
 ${context.getContext()}
 
 ## User Question:
-${userQuestion}
+${context.getUserQuestion()}
 `;
 
   const result = await generateText({
